@@ -1,0 +1,45 @@
+name: Build and Release BL602 Firmware
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Apply patches to SDK
+        run: |
+          cd bl_iot_sdk
+          for patch in ../overrides/*.patch; do
+            if [ -f "$patch" ]; then
+              echo "Applying patch: $patch"
+              git apply "$patch"
+            fi
+          done
+
+      - name: Copy source to target directory
+        run: |
+          mkdir -p bl_iot_sdk/customer_app/bl602_level2_proxy
+          cp -r src/* bl_iot_sdk/customer_app/bl602_level2_proxy/
+
+      - name: Run genromap
+        run: |
+          cd bl_iot_sdk/customer_app/bl602_level2_proxy
+          chmod +x ./genromap
+          ./genromap
+
+      - name: Create GitHub Release and Upload Artifact
+        uses: softprops/action-gh-release@v2
+        with:
+          files: bl_iot_sdk/customer_app/bl602_level2_proxy/build_out/bl602_level2_proxy.bin

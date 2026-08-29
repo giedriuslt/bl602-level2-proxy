@@ -1,0 +1,4 @@
+[submodule "bl_iot_sdk"]
+	path = bl_iot_sdk
+	url = https://github.com/bouffalolab/bl_iot_sdk
+	branch = master
