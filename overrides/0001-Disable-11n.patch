@@ -1,0 +1,25 @@
+From 6c65a91a45e77d19e2098838584674c64fcd8bd0 Mon Sep 17 00:00:00 2001
+From: giedriuslt <123905703+giedriuslt@users.noreply.github.com>
+Date: Thu, 30 Jul 2026 20:10:28 +0300
+Subject: [PATCH] Disable 11n
+
+---
+ .../network/wifi_manager/bl60x_wifi_driver/bl_mod_params.c      | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/components/network/wifi_manager/bl60x_wifi_driver/bl_mod_params.c b/components/network/wifi_manager/bl60x_wifi_driver/bl_mod_params.c
+index 01c47c50c..0fd4d7ee5 100644
+--- a/components/network/wifi_manager/bl60x_wifi_driver/bl_mod_params.c
++++ b/components/network/wifi_manager/bl60x_wifi_driver/bl_mod_params.c
+@@ -38,7 +38,7 @@
+ 
+ struct bl_mod_params bl_mod_params = {
+     /* common parameters */
+-    COMMON_PARAM(ht_on, true, true)
++    COMMON_PARAM(ht_on, false, false)
+     COMMON_PARAM(vht_on, false, false)
+     COMMON_PARAM(mcs_map, IEEE80211_VHT_MCS_SUPPORT_0_7, IEEE80211_VHT_MCS_SUPPORT_0_7)
+     COMMON_PARAM(phy_cfg, 2, 2)
+-- 
+2.52.0.windows.1
+

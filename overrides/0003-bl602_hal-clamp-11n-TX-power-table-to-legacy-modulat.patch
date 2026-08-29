@@ -1,0 +1,89 @@
+From 9f628f16a48cbedbac29e5e4e2be972ca8e181f5 Mon Sep 17 00:00:00 2001
+From: giedriuslt <123905703+giedriuslt@users.noreply.github.com>
+Date: Mon, 3 Aug 2026 17:18:08 +0300
+Subject: [PATCH] bl602_hal: clamp 11n TX power table to legacy modulation
+ twins
+
+Rate sweep measurements (pinned rates, same link, RSSI -47) showed a
+non-monotonic hole in the MCS ladder: MCS5 delivered 0% (retry-limit
+storms of 200+/window) and MCS4 was degraded, while the harder MCS6/7
+and every legacy OFDM rate up to 54M worked - including 48M, the exact
+same 64-QAM 2/3 modulation as MCS5.
+
+The difference is TX power: the dtb power tables back power off as
+modulation density rises (11g: 12,12,12,12,12,10,6,6 dBm) but the 11n
+table copies the 11g values index by index while the MCS ladder is
+offset one modulation step. MCS5 (64-QAM 2/3, like 48M) transmits at
+10 dBm where 48M uses 6 dBm, and MCS4 (16-QAM 3/4, like 36M) at 12 dBm
+where 36M uses 10 dBm. At those powers the PA distortion exceeds what
+the denser modulations tolerate, matching the measured failures
+exactly (MCS6 at the correct 6 dBm is clean).
+
+Clamp each 11n entry to its same-modulation 11g value after loading
+the dtb tables. Power is only ever reduced, and only to a level the
+dtb itself declares valid for that modulation.
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+---
+ .../platform/hosal/bl602_hal/hal_board.c      | 31 +++++++++++++++++++
+ 1 file changed, 31 insertions(+)
+
+diff --git a/components/platform/hosal/bl602_hal/hal_board.c b/components/platform/hosal/bl602_hal/hal_board.c
+index 82e9f786a..c3afa4330 100644
+--- a/components/platform/hosal/bl602_hal/hal_board.c
++++ b/components/platform/hosal/bl602_hal/hal_board.c
+@@ -1012,6 +1012,9 @@ static int hal_board_load_fdt_info(const void *dtb)
+         //TODO FIXME POWER
+         //bl60x_fw_rf_table_set(channel_div_table, channel_cnt_table, lo_fcal_div);
+ 
++        uint8_t pwr_table_11g_dtb[8];
++        int has_pwr_table_11g = 0;
++
+         USER_UNUSED(pwr_table);
+         addr_prop = fdt_getprop(fdt, offset1, "pwr_table_11b", &lentmp);
+         if (4*4 == lentmp) {
+@@ -1045,6 +1048,8 @@ static int hal_board_load_fdt_info(const void *dtb)
+                 pwr_table[7]
+             );
+             bl_tpc_update_power_rate_11g((int8_t*)pwr_table);
++            memcpy(pwr_table_11g_dtb, pwr_table, 8);
++            has_pwr_table_11g = 1;
+         } else {
+             blog_error("pwr_table_11g NULL. lentmp = %d\r\n", lentmp);
+         }
+@@ -1064,6 +1069,32 @@ static int hal_board_load_fdt_info(const void *dtb)
+                 pwr_table[6],
+                 pwr_table[7]
+             );
++            if (has_pwr_table_11g) {
++                /* Clamp each MCS to the 11g rate with the same modulation
++                 * (MCS0=6M, MCS1=12M, MCS2=18M, MCS3=24M, MCS4=36M,
++                 * MCS5=48M, MCS6=54M, MCS7 densest -> 54M). Stock dtbs
++                 * commonly copy the 11g values index by index, but the MCS
++                 * ladder is offset one modulation step, so MCS4/MCS5 end up
++                 * 2-4 dB above the power the PA can transmit their
++                 * modulation at cleanly (measured: pinned MCS5 at 10 dBm
++                 * has 0% delivery while 48M at 6 dBm is clean). */
++                static const uint8_t mcs_11g_twin[8] = {0, 2, 3, 4, 5, 6, 7, 7};
++                for (i = 0; i < 8; i++) {
++                    if (pwr_table[i] > pwr_table_11g_dtb[mcs_11g_twin[i]]) {
++                        pwr_table[i] = pwr_table_11g_dtb[mcs_11g_twin[i]];
++                    }
++                }
++                blog_info("pwr_table_11n (modulation clamped) :%u %u %u %u %u %u %u %u\r\n",
++                    pwr_table[0],
++                    pwr_table[1],
++                    pwr_table[2],
++                    pwr_table[3],
++                    pwr_table[4],
++                    pwr_table[5],
++                    pwr_table[6],
++                    pwr_table[7]
++                );
++            }
+             bl_tpc_update_power_rate_11n((int8_t*)pwr_table);
+         }  else {
+             blog_error("pwr_table_11n NULL. lentmp = %d\r\n", lentmp);
+-- 
+2.52.0.windows.1
+
