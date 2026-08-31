@@ -1,0 +1,41 @@
+From c550f1fa2dd3089b5e567cf6fcd37e61cfcadb8d Mon Sep 17 00:00:00 2001
+From: giedriuslt <123905703+giedriuslt@users.noreply.github.com>
+Date: Mon, 31 Aug 2026 21:11:38 +0300
+Subject: [PATCH] Increase lwip memory to 24K
+
+---
+ components/network/lwip/lwip-port/config/lwipopts.h     | 2 +-
+ components/platform/soc/bl602/bl602/evb/ld/flash_rom.ld | 4 ++--
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/components/network/lwip/lwip-port/config/lwipopts.h b/components/network/lwip/lwip-port/config/lwipopts.h
+index aa783a8ee..92449817d 100644
+--- a/components/network/lwip/lwip-port/config/lwipopts.h
++++ b/components/network/lwip/lwip-port/config/lwipopts.h
+@@ -69,7 +69,7 @@ a lot of data that needs to be copied, this should be set high. */
+ #elif defined(CFG_SDIOWIFI)
+ #define MEM_SIZE                (24*1024)
+ #else
+-#define MEM_SIZE                (8*1024)
++#define MEM_SIZE                (24*1024)
+ #endif
+ 
+ 
+diff --git a/components/platform/soc/bl602/bl602/evb/ld/flash_rom.ld b/components/platform/soc/bl602/bl602/evb/ld/flash_rom.ld
+index 7d03e1140..bc9159946 100644
+--- a/components/platform/soc/bl602/bl602/evb/ld/flash_rom.ld
++++ b/components/platform/soc/bl602/bl602/evb/ld/flash_rom.ld
+@@ -12,8 +12,8 @@ MEMORY
+ {
+   rom       (rxai!w) : ORIGIN = 0x21015000, LENGTH = 44K
+   flash     (rxai!w) : ORIGIN = 0x23000000, LENGTH = 4M
+-  ram_tcm   (wxa)    : ORIGIN = 0x4200C000, LENGTH = (16K + 16K + 48K + 64K + 64K + 8K - __EM_SIZE) /*put itcm with dtam and also OCRAM*/
+-  ram_wifi  (wxa)    : ORIGIN = 0x42042000 - __EM_SIZE, LENGTH = (8K + 104K - 64K - 8K) /*leave 8K left for BLE*/
++  ram_tcm   (wxa)    : ORIGIN = 0x4200C000, LENGTH = (16K + 16K + 48K + 64K + 64K + 8K - __EM_SIZE - 16K) /*put itcm with dtam and also OCRAM*/
++  ram_wifi  (wxa)    : ORIGIN = 0x4203E000 - __EM_SIZE, LENGTH = (8K + 104K - 64K - 8K + 16K) /*leave 8K left for BLE*/
+   bugkill   (rxai!w) : ORIGIN = 0xD0000000, LENGTH = 16M
+ }
+ 
+-- 
+2.52.0.windows.1
+
